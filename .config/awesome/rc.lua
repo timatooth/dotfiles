@@ -18,6 +18,10 @@ local hotkeys_popup = require("awful.hotkeys_popup")
 -- when client with a matching name is opened:
 require("awful.hotkeys_popup.keys")
 
+-- My Widgets
+local volume_widget = require('volume_widget')
+local kubectl_widget = require('kubectl_widget')
+
 -- {{{ Error handling
 -- Check if awesome encountered an error during startup and fell back to
 -- another config (This code will only ever execute for the fallback config)
@@ -45,10 +49,12 @@ end
 
 -- {{{ Variable definitions
 -- Themes define colours, icons, font and wallpapers.
-beautiful.init(gears.filesystem.get_themes_dir() .. "default/theme.lua")
+--beautiful.init(gears.filesystem.get_themes_dir() .. "zenburn/theme.lua")
+beautiful.init("/home/tim/.config/awesome/theme.lua")
+
 
 -- This is used later as the default terminal and editor to run.
-terminal = "xterm"
+terminal = "alacritty"
 editor = os.getenv("EDITOR") or "nano"
 editor_cmd = terminal .. " -e " .. editor
 
@@ -61,7 +67,6 @@ modkey = "Mod4"
 
 -- Table of layouts to cover with awful.layout.inc, order matters.
 awful.layout.layouts = {
-    awful.layout.suit.floating,
     awful.layout.suit.tile,
     awful.layout.suit.tile.left,
     awful.layout.suit.tile.bottom,
@@ -70,10 +75,11 @@ awful.layout.layouts = {
     awful.layout.suit.fair.horizontal,
     awful.layout.suit.spiral,
     awful.layout.suit.spiral.dwindle,
-    awful.layout.suit.max,
-    awful.layout.suit.max.fullscreen,
+    --awful.layout.suit.max,
+    --awful.layout.suit.max.fullscreen,
     awful.layout.suit.magnifier,
     awful.layout.suit.corner.nw,
+    awful.layout.suit.floating,
     -- awful.layout.suit.corner.ne,
     -- awful.layout.suit.corner.sw,
     -- awful.layout.suit.corner.se,
@@ -94,6 +100,9 @@ mymainmenu = awful.menu({ items = { { "awesome", myawesomemenu, beautiful.awesom
                                     { "open terminal", terminal }
                                   }
                         })
+
+praisewidget = wibox.widget.textbox()
+praisewidget.text = "You are great!"
 
 mylauncher = awful.widget.launcher({ image = beautiful.awesome_icon,
                                      menu = mymainmenu })
@@ -123,8 +132,9 @@ local taglist_buttons = gears.table.join(
                                                   client.focus:toggle_tag(t)
                                               end
                                           end),
-                    awful.button({ }, 4, function(t) awful.tag.viewnext(t.screen) end),
-                    awful.button({ }, 5, function(t) awful.tag.viewprev(t.screen) end)
+                    --swap scrolling
+                    awful.button({ }, 5, function(t) awful.tag.viewnext(t.screen) end),
+                    awful.button({ }, 4, function(t) awful.tag.viewprev(t.screen) end)
                 )
 
 local tasklist_buttons = gears.table.join(
@@ -168,8 +178,11 @@ awful.screen.connect_for_each_screen(function(s)
     -- Wallpaper
     set_wallpaper(s)
 
+    names = { "1.main", "1.email", "3.slack", "4.blender", "5.dashboard", "6.im", "7.todo", "8", "9" }
+
     -- Each screen has its own tag table.
-    awful.tag({ "1", "2", "3", "4", "5", "6", "7", "8", "9" }, s, awful.layout.layouts[1])
+    --awful.tag({ "1", "2", "3", "4", "5", "6", "7", "8", "9" }, s, awful.layout.layouts[1])
+    awful.tag(names, s, awful.layout.layouts[1])
 
     -- Create a promptbox for each screen
     s.mypromptbox = awful.widget.prompt()
@@ -212,8 +225,52 @@ awful.screen.connect_for_each_screen(function(s)
             layout = wibox.layout.fixed.horizontal,
             mykeyboardlayout,
             wibox.widget.systray(),
+            --praisewidget,
+            volume_widget,
             mytextclock,
             s.mylayoutbox,
+        },
+    }
+
+    local mypie = wibox.widget {
+        max_value     = 1,
+        value         = 0.33,
+        forced_height = 20,
+        forced_width  = 100,
+        shape         = gears.shape.rounded_bar,
+        border_width  = 2,
+        border_color  = beautiful.border_color,
+        widget        = wibox.widget.progressbar,
+    }
+
+    local mygraph = wibox.widget {
+        max_value = 100,
+        widget = wibox.widget.graph
+    }
+
+    local kube_icon = wibox.widget {
+        image  = "/home/tim/.config/awesome/k8s.png",
+        resize = true,
+        widget = wibox.widget.imagebox
+    }
+
+    mygraph:add_value(25)
+
+    -- create a bottom wibar with silly quotes
+    s.bottomwibox = awful.wibar({ position = "bottom", screen = s })
+    s.bottomwibox:setup {
+        layout = wibox.layout.align.horizontal,
+        { -- Left widgets
+            layout = wibox.layout.fixed.horizontal,
+            kube_icon,
+            kubectl_widget
+        },
+        --mytextclock,
+        --s.mytasklist,
+        { -- Right widgets
+            layout = wibox.layout.fixed.horizontal,
+            mypie,
+            mygraph,
         },
     }
 end)
@@ -221,9 +278,9 @@ end)
 
 -- {{{ Mouse bindings
 root.buttons(gears.table.join(
-    awful.button({ }, 3, function () mymainmenu:toggle() end),
-    awful.button({ }, 4, awful.tag.viewnext),
-    awful.button({ }, 5, awful.tag.viewprev)
+    awful.button({ }, 3, function () mymainmenu:toggle() end)
+    --awful.button({ }, 4, awful.tag.viewnext), disable mousewheel switching empty workspaces
+    --awful.button({ }, 5, awful.tag.viewprev)
 ))
 -- }}}
 
@@ -313,6 +370,14 @@ globalkeys = gears.table.join(
     -- Prompt
     awful.key({ modkey },            "r",     function () awful.screen.focused().mypromptbox:run() end,
               {description = "run prompt", group = "launcher"}),
+
+    -- My Sound controls using rotary switch
+    awful.key({ }, "XF86AudioRaiseVolume", function ()
+        awful.util.spawn("amixer set Master 1%+") end),
+    awful.key({ }, "XF86AudioLowerVolume", function ()
+        awful.util.spawn("amixer set Master 1%-") end),
+    awful.key({ }, "XF86AudioMute", function ()
+        awful.util.spawn("amixer sset Master toggle") end),
 
     awful.key({ modkey }, "x",
               function ()
@@ -498,7 +563,6 @@ awful.rules.rules = {
     --   properties = { screen = 1, tag = "2" } },
 }
 -- }}}
-
 -- {{{ Signals
 -- Signal function to execute when a new client appears.
 client.connect_signal("manage", function (c)
@@ -562,3 +626,35 @@ end)
 client.connect_signal("focus", function(c) c.border_color = beautiful.border_focus end)
 client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
 -- }}}
+
+-- WIP this is still a mess :(
+function spawn_once(command, tag)
+    -- create move callback
+    local callback
+    callback = function(c)
+      c:move_to_tag(tag)
+      client.disconnect_signal("manage", callback)
+    end
+    client.connect_signal("manage", callback)
+
+
+    local findme = command
+    local firstspace = findme:find(" ")
+    if firstspace then
+      findme = findme:sub(0, firstspace-1)
+    end
+
+    awful.spawn.with_shell("(" .. command .. ")")
+end
+
+-- this doesn't work for most programs which lack 'startup notifications' to change
+-- the porperties I think.
+-- awful.spawn.once("glxgears", {
+--     floating  = true,
+--     tag       = tag,
+--     placement = awful.placement.bottom_right,
+-- })
+
+--local screen = awful.screen.focused()
+--spawn_once("alacritty", screen.tags[1])
+--spawn_once("firefox -P dashboard https://web.whatsapp.com/", screen.tags[6])
