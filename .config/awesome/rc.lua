@@ -101,9 +101,6 @@ mymainmenu = awful.menu({ items = { { "awesome", myawesomemenu, beautiful.awesom
                                   }
                         })
 
-praisewidget = wibox.widget.textbox()
-praisewidget.text = "You are great!"
-
 mylauncher = awful.widget.launcher({ image = beautiful.awesome_icon,
                                      menu = mymainmenu })
 
@@ -178,7 +175,7 @@ awful.screen.connect_for_each_screen(function(s)
     -- Wallpaper
     set_wallpaper(s)
 
-    names = { "1.main", "1.email", "3.slack", "4.blender", "5.dashboard", "6.im", "7.todo", "8", "9" }
+    names = { "1.main", "2.email", "3.slack", "4.blender", "5.dashboard", "6.im", "7.todo", "8", "9" }
 
     -- Each screen has its own tag table.
     --awful.tag({ "1", "2", "3", "4", "5", "6", "7", "8", "9" }, s, awful.layout.layouts[1])
@@ -211,6 +208,9 @@ awful.screen.connect_for_each_screen(function(s)
     -- Create the wibox
     s.mywibox = awful.wibar({ position = "top", screen = s })
 
+    cpu_widget = require("awesome-wm-widgets.cpu-widget.cpu-widget")
+    ram_widget = require("awesome-wm-widgets.ram-widget.ram-widget")
+
     -- Add widgets to the wibox
     s.mywibox:setup {
         layout = wibox.layout.align.horizontal,
@@ -225,8 +225,9 @@ awful.screen.connect_for_each_screen(function(s)
             layout = wibox.layout.fixed.horizontal,
             mykeyboardlayout,
             wibox.widget.systray(),
-            --praisewidget,
             volume_widget,
+            cpu_widget(),
+            ram_widget(),
             mytextclock,
             s.mylayoutbox,
         },
@@ -256,6 +257,8 @@ awful.screen.connect_for_each_screen(function(s)
 
     mygraph:add_value(25)
 
+
+
     -- create a bottom wibar with silly quotes
     s.bottomwibox = awful.wibar({ position = "bottom", screen = s })
     s.bottomwibox:setup {
@@ -270,7 +273,7 @@ awful.screen.connect_for_each_screen(function(s)
         { -- Right widgets
             layout = wibox.layout.fixed.horizontal,
             mypie,
-            mygraph,
+            --mygraph,
         },
     }
 end)
